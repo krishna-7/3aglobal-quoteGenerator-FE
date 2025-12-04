@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'screens/login_screen.dart';
 import 'screens/dashboard_screen.dart';
-import 'screens/income_screen.dart';
+import 'screens/payment_links_screen.dart';
 import 'providers/auth_provider.dart';
 
 void main() {
@@ -62,6 +62,9 @@ final _router = GoRouter(
       path: '/dashboard',
       builder: (context, state) => const DashboardScreen(),
     ),
-    GoRoute(path: '/income', builder: (context, state) => const IncomeScreen()),
+    GoRoute(
+      path: '/payment-links',
+      builder: (context, state) => const PaymentLinksScreen(),
+    ),
   ],
 );
