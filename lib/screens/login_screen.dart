@@ -241,61 +241,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               );
                             },
                           ),
-                          const SizedBox(height: 32),
-                          // Divider
-                          Row(
-                            children: [
-                              Expanded(child: Divider()),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                ),
-                                child: Text('Or'),
-                              ),
-                              Expanded(child: Divider()),
-                            ],
-                          ),
-                          const SizedBox(height: 32),
-                          // Social Login Buttons
-                          SizedBox(
-                            width: double.infinity,
-                            height: 52,
-                            child: OutlinedButton.icon(
-                              onPressed: () {
-                                // TODO: Implement Google login
-                              },
-                              icon: const Icon(Icons.g_mobiledata),
-                              label: const Text('Continue with Google'),
-                              style: OutlinedButton.styleFrom(
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          SizedBox(
-                            width: double.infinity,
-                            height: 52,
-                            child: OutlinedButton.icon(
-                              onPressed: () {
-                                // TODO: Implement other social login
-                              },
-                              icon: const Icon(Icons.apple),
-                              label: const Text('Continue with Apple'),
-                              style: OutlinedButton.styleFrom(
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 32),
+                          const SizedBox(height: 100),
+                          
 
                           // Footer
                           const Center(
                             child: Text(
-                              '© 2023 ALL RIGHTS RESERVED',
+                              '© 2025 ALL RIGHTS RESERVED',
                               style: TextStyle(
                                 fontSize: 12,
                                 color: Colors.grey,

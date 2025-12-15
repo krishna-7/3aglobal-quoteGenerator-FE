@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
 import '../providers/payment_links_provider.dart';
+import '../providers/payment_modes_provider.dart';
 import '../widgets/sidebar.dart';
 
 class PaymentLinksScreen extends ConsumerStatefulWidget {
@@ -45,6 +46,9 @@ class _PaymentLinksScreenState extends ConsumerState<PaymentLinksScreen> {
 
   // Status
   String _status = 'pending';
+
+  // Payment Mode
+  int? _selectedPaymentModeId;
 
   // Loading state
   bool _isSaving = false;
@@ -268,6 +272,11 @@ class _PaymentLinksScreenState extends ConsumerState<PaymentLinksScreen> {
                             _termsAndConditionsController,
                             maxLines: 4,
                           ),
+                          const SizedBox(height: 24),
+                          // Payment Mode
+                          _buildSectionTitle('Payment Mode'),
+                          const SizedBox(height: 16),
+                          _buildPaymentModeSelector(),
                           const SizedBox(height: 24),
                           // Status
                           _buildSectionTitle('Status'),
@@ -708,6 +717,59 @@ class _PaymentLinksScreenState extends ConsumerState<PaymentLinksScreen> {
     );
   }
 
+  Widget _buildPaymentModeSelector() {
+    final paymentModesAsync = ref.watch(paymentModesProvider);
+
+    return paymentModesAsync.when(
+      data: (paymentModes) {
+        return DropdownButtonFormField<int>(
+          value: _selectedPaymentModeId,
+          decoration: InputDecoration(
+            hintText: 'Select Payment Mode',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(4),
+              borderSide: const BorderSide(color: Color(0xFFDEE2E6)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(4),
+              borderSide: const BorderSide(color: Color(0xFFDEE2E6)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(4),
+              borderSide: const BorderSide(color: Color(0xFF0D6EFD)),
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 12,
+            ),
+          ),
+          items: paymentModes
+              .map(
+                (mode) => DropdownMenuItem<int>(
+                  value: mode.id,
+                  child: Text(mode.name),
+                ),
+              )
+              .toList(),
+          onChanged: (value) {
+            setState(() {
+              _selectedPaymentModeId = value;
+            });
+          },
+          validator: (value) {
+            // Optional: making it required
+            if (value == null) {
+              return 'Please select a payment mode';
+            }
+            return null;
+          },
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stack) => Text('Error: $error'),
+    );
+  }
+
   Future<void> _handleSave() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -756,6 +818,7 @@ class _PaymentLinksScreenState extends ConsumerState<PaymentLinksScreen> {
             _termsAndConditionsController.text.trim().isEmpty
             ? null
             : _termsAndConditionsController.text.trim(),
+        'payment_mode_id': _selectedPaymentModeId,
       };
 
       // Remove null values
@@ -854,6 +917,7 @@ class _PaymentLinksScreenState extends ConsumerState<PaymentLinksScreen> {
       _deliveryType = 'email';
       _invoiceCurrency = 'AED';
       _status = 'pending';
+      _selectedPaymentModeId = null;
     });
   }
 
