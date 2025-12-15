@@ -80,7 +80,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       const Text(
-                        'PRDS',
+                        '#A Global',
                         style: TextStyle(
                           fontSize: 48,
                           fontWeight: FontWeight.bold,
@@ -89,7 +89,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                       const SizedBox(height: 16),
                       const Text(
-                        'പ്രത്യക്ഷ രക്ഷാ ദൈവസഭ',
+                        '3A Global',
                         style: TextStyle(fontSize: 24, color: Colors.white),
                       ),
                       const SizedBox(height: 32),
@@ -291,28 +291,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             ),
                           ),
                           const SizedBox(height: 32),
-                          // Sign Up Link
-                          Center(
-                            child: RichText(
-                              text: TextSpan(
-                                style: const TextStyle(color: Colors.grey),
-                                children: [
-                                  const TextSpan(
-                                    text: 'Don\'t you have an account? ',
-                                  ),
-                                  WidgetSpan(
-                                    child: TextButton(
-                                      onPressed: () {
-                                        // TODO: Navigate to sign up
-                                      },
-                                      child: const Text('Sign up'),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 48),
+
                           // Footer
                           const Center(
                             child: Text(

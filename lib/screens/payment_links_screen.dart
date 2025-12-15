@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
+import '../providers/payment_links_provider.dart';
 import '../widgets/sidebar.dart';
 
 class PaymentLinksScreen extends ConsumerStatefulWidget {
@@ -34,7 +35,7 @@ class _PaymentLinksScreenState extends ConsumerState<PaymentLinksScreen> {
   final _smsBodyController = TextEditingController();
 
   // Invoice Fields
-  final _invoiceCurrencyController = TextEditingController();
+  String _invoiceCurrency = 'AED';
   final _invoiceAmountController = TextEditingController();
   final _taxTypeController = TextEditingController();
   final _taxAmountController = TextEditingController();
@@ -44,6 +45,9 @@ class _PaymentLinksScreenState extends ConsumerState<PaymentLinksScreen> {
 
   // Status
   String _status = 'pending';
+
+  // Loading state
+  bool _isSaving = false;
 
   @override
   void dispose() {
@@ -55,7 +59,6 @@ class _PaymentLinksScreenState extends ConsumerState<PaymentLinksScreen> {
     _emailSubjectController.dispose();
     _emailBodyController.dispose();
     _smsBodyController.dispose();
-    _invoiceCurrencyController.dispose();
     _invoiceAmountController.dispose();
     _taxTypeController.dispose();
     _taxAmountController.dispose();
@@ -207,13 +210,7 @@ class _PaymentLinksScreenState extends ConsumerState<PaymentLinksScreen> {
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Expanded(
-                                child: _buildTextField(
-                                  'Invoice Currency *',
-                                  _invoiceCurrencyController,
-                                  isRequired: true,
-                                ),
-                              ),
+                              Expanded(child: _buildCurrencySelector()),
                               const SizedBox(width: 24),
                               Expanded(
                                 child: _buildTextField(
@@ -282,22 +279,35 @@ class _PaymentLinksScreenState extends ConsumerState<PaymentLinksScreen> {
                             width: 191,
                             height: 40,
                             child: ElevatedButton(
-                              onPressed: _handleSave,
+                              onPressed: _isSaving ? null : _handleSave,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF6FAB23),
                                 foregroundColor: Colors.white,
+                                disabledBackgroundColor: Colors.grey,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                               ),
-                              child: const Text(
-                                'Save Payment Link',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w500,
-                                  fontFamily: 'Poppins',
-                                ),
-                              ),
+                              child: _isSaving
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                              Colors.white,
+                                            ),
+                                      ),
+                                    )
+                                  : const Text(
+                                      'Save Payment Link',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w500,
+                                        fontFamily: 'Poppins',
+                                      ),
+                                    ),
                             ),
                           ),
                           const SizedBox(height: 32),
@@ -603,6 +613,63 @@ class _PaymentLinksScreenState extends ConsumerState<PaymentLinksScreen> {
     );
   }
 
+  Widget _buildCurrencySelector() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Invoice Currency *',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: Color(0xFF212529),
+            fontFamily: 'Poppins',
+          ),
+        ),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String>(
+          value: _invoiceCurrency,
+          decoration: InputDecoration(
+            hintText: 'Select Currency',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(4),
+              borderSide: const BorderSide(color: Color(0xFFDEE2E6)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(4),
+              borderSide: const BorderSide(color: Color(0xFFDEE2E6)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(4),
+              borderSide: const BorderSide(color: Color(0xFF0D6EFD)),
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 12,
+            ),
+          ),
+          items: ['AED', 'USD']
+              .map(
+                (currency) =>
+                    DropdownMenuItem(value: currency, child: Text(currency)),
+              )
+              .toList(),
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'This field is required';
+            }
+            return null;
+          },
+          onChanged: (value) {
+            setState(() {
+              _invoiceCurrency = value!;
+            });
+          },
+        ),
+      ],
+    );
+  }
+
   Widget _buildStatusSelector() {
     return DropdownButtonFormField<String>(
       initialValue: _status,
@@ -641,13 +708,153 @@ class _PaymentLinksScreenState extends ConsumerState<PaymentLinksScreen> {
     );
   }
 
-  void _handleSave() {
-    if (_formKey.currentState!.validate()) {
-      // TODO: Implement save logic with API call
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Payment link saved successfully')),
-      );
+  Future<void> _handleSave() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
     }
+
+    setState(() {
+      _isSaving = true;
+    });
+
+    try {
+      // Prepare the data payload
+      final Map<String, dynamic> data = {
+        'customer_name': _customerNameController.text.trim(),
+        'reference': _referenceController.text.trim(),
+        'reference_1': _reference1Controller.text.trim(),
+        'delivery_type': _deliveryType,
+        'customer_email': _customerEmailController.text.trim(),
+        'customer_phone': _customerPhoneController.text.trim().isEmpty
+            ? null
+            : _customerPhoneController.text.trim(),
+        'email_subject': _deliveryType == 'email'
+            ? (_emailSubjectController.text.trim().isEmpty
+                  ? null
+                  : _emailSubjectController.text.trim())
+            : null,
+        'email_body': _deliveryType == 'email'
+            ? (_emailBodyController.text.trim().isEmpty
+                  ? null
+                  : _emailBodyController.text.trim())
+            : null,
+        'sms_body': _deliveryType == 'sms'
+            ? (_smsBodyController.text.trim().isEmpty
+                  ? null
+                  : _smsBodyController.text.trim())
+            : null,
+        'status': _status,
+        'invoice_currency': _invoiceCurrency,
+        'invoice_amount': _invoiceAmountController.text.trim(),
+        'tax_type': _taxTypeController.text.trim(),
+        'tax_amount': _taxAmountController.text.trim(),
+        'total_amount': _totalAmountController.text.trim(),
+        'invoice_valid_from': _formatDateForAPI(
+          _invoiceValidFromController.text,
+        ),
+        'terms_and_conditions':
+            _termsAndConditionsController.text.trim().isEmpty
+            ? null
+            : _termsAndConditionsController.text.trim(),
+      };
+
+      // Remove null values
+      data.removeWhere((key, value) => value == null);
+
+      // Call the API
+      await ref.read(createPaymentLinkProvider(data).future);
+
+      // Refresh the payment links list
+      ref.invalidate(paymentLinksProvider);
+
+      // Clear the form
+      _resetForm();
+
+      // Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Payment link saved successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Error: ${e.toString().replaceAll('Exception: ', '')}',
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
+    }
+  }
+
+  String _formatDateForAPI(String dateString) {
+    if (dateString.isEmpty) return '';
+
+    // Parse date from format "07 Aug, 2023" to "2023-08-07"
+    try {
+      final parts = dateString.split(' ');
+      if (parts.length == 3) {
+        final day = parts[0].padLeft(2, '0');
+        final month = _getMonthNumber(parts[1]);
+        final year = parts[2];
+        return '$year-$month-$day';
+      }
+    } catch (e) {
+      // If parsing fails, return as is
+    }
+    return dateString;
+  }
+
+  String _getMonthNumber(String monthName) {
+    const months = {
+      'Jan': '01',
+      'Feb': '02',
+      'Mar': '03',
+      'Apr': '04',
+      'May': '05',
+      'Jun': '06',
+      'Jul': '07',
+      'Aug': '08',
+      'Sep': '09',
+      'Oct': '10',
+      'Nov': '11',
+      'Dec': '12',
+    };
+    return months[monthName] ?? '01';
+  }
+
+  void _resetForm() {
+    _customerNameController.clear();
+    _customerEmailController.clear();
+    _customerPhoneController.clear();
+    _referenceController.clear();
+    _reference1Controller.clear();
+    _emailSubjectController.clear();
+    _emailBodyController.clear();
+    _smsBodyController.clear();
+    _invoiceAmountController.clear();
+    _taxTypeController.clear();
+    _taxAmountController.clear();
+    _totalAmountController.clear();
+    _invoiceValidFromController.clear();
+    _termsAndConditionsController.clear();
+    setState(() {
+      _deliveryType = 'email';
+      _invoiceCurrency = 'AED';
+      _status = 'pending';
+    });
   }
 
   Widget _buildPaymentLinksTable() {
@@ -730,28 +937,137 @@ class _PaymentLinksScreenState extends ConsumerState<PaymentLinksScreen> {
               ],
             ),
           ),
-          // Table Rows (Placeholder - will be populated from API)
-          ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: 5,
-            itemBuilder: (context, index) {
-              return Container(
-                padding: const EdgeInsets.symmetric(
-                  vertical: 12,
-                  horizontal: 16,
+          // Table Rows (Populated from API)
+          Consumer(
+            builder: (context, ref, child) {
+              final paymentLinksAsync = ref.watch(paymentLinksProvider);
+
+              return paymentLinksAsync.when(
+                data: (paymentLinks) {
+                  if (paymentLinks.isEmpty) {
+                    return const Padding(
+                      padding: EdgeInsets.all(24.0),
+                      child: Center(
+                        child: Text(
+                          'No payment links found',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Color(0xFF6C757D),
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+
+                  return ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: paymentLinks.length,
+                    itemBuilder: (context, index) {
+                      final paymentLink = paymentLinks[index];
+                      return Container(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 12,
+                          horizontal: 16,
+                        ),
+                        decoration: BoxDecoration(
+                          border: Border(
+                            bottom: BorderSide(color: Colors.grey[200]!),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              flex: 2,
+                              child: Text(
+                                paymentLink.customerName,
+                                style: const TextStyle(fontSize: 14),
+                              ),
+                            ),
+                            Expanded(
+                              flex: 2,
+                              child: Text(
+                                paymentLink.reference,
+                                style: const TextStyle(fontSize: 14),
+                              ),
+                            ),
+                            Expanded(
+                              flex: 1,
+                              child: Text(
+                                '${paymentLink.invoiceCurrency} ${paymentLink.totalAmount}',
+                                style: const TextStyle(fontSize: 14),
+                              ),
+                            ),
+                            Expanded(
+                              flex: 1,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: _getStatusColor(
+                                    paymentLink.status,
+                                  ).withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  paymentLink.status.toUpperCase(),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                    color: _getStatusColor(paymentLink.status),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              flex: 1,
+                              child: IconButton(
+                                icon: const Icon(Icons.more_vert, size: 20),
+                                onPressed: () {
+                                  // TODO: Show action menu
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  );
+                },
+                loading: () => const Padding(
+                  padding: EdgeInsets.all(24.0),
+                  child: Center(child: CircularProgressIndicator()),
                 ),
-                decoration: BoxDecoration(
-                  border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
-                ),
-                child: const Row(
-                  children: [
-                    Expanded(flex: 2, child: Text('John Doe')),
-                    Expanded(flex: 2, child: Text('REF-001')),
-                    Expanded(flex: 1, child: Text('\$100.00')),
-                    Expanded(flex: 1, child: Text('Pending')),
-                    Expanded(flex: 1, child: Icon(Icons.more_vert, size: 20)),
-                  ],
+                error: (error, stack) => Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Center(
+                    child: Column(
+                      children: [
+                        const Icon(
+                          Icons.error_outline,
+                          color: Colors.red,
+                          size: 48,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Error loading payment links',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Color(0xFF6C757D),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        ElevatedButton(
+                          onPressed: () {
+                            ref.invalidate(paymentLinksProvider);
+                          },
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               );
             },
@@ -759,5 +1075,22 @@ class _PaymentLinksScreenState extends ConsumerState<PaymentLinksScreen> {
         ],
       ),
     );
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'pending':
+        return Colors.orange;
+      case 'sent':
+        return Colors.blue;
+      case 'paid':
+        return Colors.green;
+      case 'expired':
+        return Colors.red;
+      case 'cancelled':
+        return Colors.grey;
+      default:
+        return Colors.grey;
+    }
   }
 }
