@@ -4,6 +4,10 @@ import 'package:go_router/go_router.dart';
 import 'screens/login_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/payment_links_screen.dart';
+import 'screens/users_screen.dart';
+import 'screens/payment_link_report_screen.dart';
+import 'screens/user_types_screen.dart';
+import 'screens/menus_screen.dart';
 import 'providers/auth_provider.dart';
 
 void main() {
@@ -66,5 +70,15 @@ final _router = GoRouter(
       path: '/payment-links',
       builder: (context, state) => const PaymentLinksScreen(),
     ),
+    GoRoute(
+      path: '/users',
+      builder: (context, state) => const UsersScreen(),
+    ),
+    GoRoute(
+      path: '/reports/payment-links',
+      builder: (context, state) => const PaymentLinkReportScreen(),
+    ),
+    GoRoute(path: '/settings/user-types', builder: (context, state) => const UserTypesScreen()),
+    GoRoute(path: '/settings/menus', builder: (context, state) => const MenusScreen()),
   ],
 );

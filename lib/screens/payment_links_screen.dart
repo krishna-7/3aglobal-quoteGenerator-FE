@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../providers/auth_provider.dart';
 import '../providers/payment_links_provider.dart';
 import '../providers/payment_modes_provider.dart';
@@ -978,6 +980,13 @@ class _PaymentLinksScreenState extends ConsumerState<PaymentLinksScreen> {
                   ),
                 ),
                 Expanded(
+                  flex: 2,
+                  child: Text(
+                    'Link',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                Expanded(
                   flex: 1,
                   child: Text(
                     'Amount',
@@ -1054,6 +1063,78 @@ class _PaymentLinksScreenState extends ConsumerState<PaymentLinksScreen> {
                                 paymentLink.reference,
                                 style: const TextStyle(fontSize: 14),
                               ),
+                            ),
+                            Expanded(
+                              flex: 2,
+                              child: paymentLink.paymentLinkUrl != null
+                                ? Row(children: [
+                                    // Copy button
+                                    Tooltip(
+                                      message: 'Copy link',
+                                      child: InkWell(
+                                        onTap: () {
+                                          Clipboard.setData(ClipboardData(text: paymentLink.paymentLinkUrl!));
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(
+                                              content: Text('Link copied to clipboard!'),
+                                              duration: Duration(seconds: 2),
+                                              backgroundColor: Color(0xFF0D6EFD),
+                                            ),
+                                          );
+                                        },
+                                        borderRadius: BorderRadius.circular(4),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFF0D6EFD).withValues(alpha: 0.08),
+                                            borderRadius: BorderRadius.circular(4),
+                                            border: Border.all(color: const Color(0xFF0D6EFD).withValues(alpha: 0.25)),
+                                          ),
+                                          child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                                            Icon(Icons.copy_outlined, size: 12, color: Color(0xFF0D6EFD)),
+                                            SizedBox(width: 4),
+                                            Text('Copy', style: TextStyle(fontSize: 11, color: Color(0xFF0D6EFD), fontWeight: FontWeight.w500)),
+                                          ]),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    // Open button
+                                    Tooltip(
+                                      message: 'Open in browser',
+                                      child: InkWell(
+                                        onTap: () async {
+                                          final messenger = ScaffoldMessenger.of(context);
+                                          final uri = Uri.tryParse(paymentLink.paymentLinkUrl!);
+                                          if (uri != null && await canLaunchUrl(uri)) {
+                                            await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                          } else {
+                                            messenger.showSnackBar(
+                                              const SnackBar(
+                                                content: Text('Could not open link'),
+                                                backgroundColor: Color(0xFFDC3545),
+                                              ),
+                                            );
+                                          }
+                                        },
+                                        borderRadius: BorderRadius.circular(4),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFF6FAB23).withValues(alpha: 0.08),
+                                            borderRadius: BorderRadius.circular(4),
+                                            border: Border.all(color: const Color(0xFF6FAB23).withValues(alpha: 0.25)),
+                                          ),
+                                          child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                                            Icon(Icons.open_in_new, size: 12, color: Color(0xFF6FAB23)),
+                                            SizedBox(width: 4),
+                                            Text('Open', style: TextStyle(fontSize: 11, color: Color(0xFF6FAB23), fontWeight: FontWeight.w500)),
+                                          ]),
+                                        ),
+                                      ),
+                                    ),
+                                  ])
+                                : const Text('N/A', style: TextStyle(fontSize: 13, color: Color(0xFFADB5BD))),
                             ),
                             Expanded(
                               flex: 1,
